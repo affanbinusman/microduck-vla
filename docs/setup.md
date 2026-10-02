@@ -117,6 +117,26 @@ agent sandbox.
 
 ## Initial verification (October 1, 2026)
 
+For a full Apple GPU training smoke test, run:
+
+```bash
+bash scripts/test-gpu.sh
+# Or with the simulator environment activated:
+python scripts/test_apple_gpu.py
+```
+
+The test uses [PyTorch's MPS backend](https://docs.pytorch.org/docs/2.9/notes/mps.html).
+It learns random linear coefficients from synthetic inputs with small target
+noise, using 2,048 training samples and 512 held-out samples. It prints the chip,
+device, loss, training time and allocated GPU tensor memory, and fails if MPS
+is unavailable, gradients are not on MPS, weights do not change, or held-out
+loss does not drop by at least 80%. CPU fallback is disabled. No data files or
+checkpoints are created.
+
+Verified on this Apple M3: 200 optimizer steps completed in 0.63 seconds;
+held-out loss fell from 2.666017 to 0.000105. This confirms a small synthetic
+training workload; model-specific training support remains to be tested.
+
 - Native arm64 macOS 15.7.7; managed Python 3.12.14, uv 0.12.21, tmux 3.7c.
 - Locked simulator dependencies installed (MuJoCo 3.10.0, PyTorch 2.9.1).
 - Upstream contract/world/brain smoke suite: **56 passed, 1 skipped** (optional
@@ -128,8 +148,9 @@ agent sandbox.
 - Simulator and viewer started in tmux; viewer HTTP route returned 200.
 - A real WebSocket frame confirmed the duck on the lab stage.
 - PyTorch MPS reported available and computed a small tensor operation correctly.
-  This verifies GPU access only; no training step was attempted.
+  The synthetic training test above subsequently verified backward passes and
+  optimizer updates as well.
 
 The browser automation tool could not bind an in-app tab, so browser canvas
 appearance has not yet been verified by automation. Use the localhost links above
-to view it. No model training, dataset download, commit or push was performed.
+to view it. No robotics model training, dataset download, commit or push was performed.

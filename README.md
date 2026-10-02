@@ -30,3 +30,12 @@ For the simulator’s separate environment:
 ```bash
 source external/microduck-lab/microduck_local/.venv/bin/activate
 ```
+
+Test Apple GPU training on random synthetic data (uses the simulator's PyTorch):
+
+```bash
+bash scripts/test-gpu.sh
+```
+
+It prints your chip and MPS status, trains a small regression model, and checks
+that GPU gradients update the weights and reduce loss on fresh random samples.
