@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+# Local simulation assets, caches, logs and future model artifacts
+/artifacts/
+.DS_Store
+MUJOCO_LOG.TXT

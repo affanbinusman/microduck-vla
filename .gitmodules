@@ -1,0 +1,3 @@
+[submodule "external/microduck-lab"]
+	path = external/microduck-lab
+	url = https://github.com/affanbinusman/microduck-lab.git
