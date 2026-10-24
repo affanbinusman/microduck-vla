@@ -24,8 +24,9 @@ Each sample directory contains:
 
 The dataset root also contains `annotations.jsonl` for loading all samples and
 `contact_sheet.png` for visual review. The configuration defines object
-templates and scene positions; the annotation's nested `target` object records
-which object was selected for that sample. The generator changes target,
+templates, scene positions, and room-wall height; the annotation's nested
+`target` object records which object was selected for that sample. The taller
+room walls provide a realistic background instead of MuJoCo's black sky. The generator changes target,
 placement, and small position offsets under successive seeds, and fails if a
 selected target has no visible pixels. Each run replaces the generated split
 directories so a smaller run cannot leave stale samples from a larger run.

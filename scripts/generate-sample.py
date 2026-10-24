@@ -107,7 +107,10 @@ def sample_scene(config: dict, index: int) -> tuple[int, list[dict], dict, str]:
 def make_scenario(config: dict, seed: int, objects: list[dict]) -> Scenario:
     hx, hy = 1.5, 1.25
     corners = [(-hx, -hy), (hx, -hy), (hx, hy), (-hx, hy)]
-    walls = [Wall(corners[i], corners[(i + 1) % 4]) for i in range(4)]
+    walls = [
+        Wall(corners[i], corners[(i + 1) % 4], height=float(config["wall_height"]))
+        for i in range(4)
+    ]
     props = []
     for obj in objects:
         shape = SHAPES.get(obj["shape"])
