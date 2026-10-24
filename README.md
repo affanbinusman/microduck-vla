@@ -43,7 +43,7 @@ that GPU gradients update the weights and reduce loss on fresh random samples.
 ## Generate a dataset
 
 ```bash
-bash scripts/generate-one-sample.sh --samples 10
+bash scripts/generate-sample.sh --samples 10
 ```
 
 Choose any positive dataset size with `--samples`. The generator assigns

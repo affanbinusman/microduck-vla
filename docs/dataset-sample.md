@@ -3,7 +3,7 @@
 Run from the repository root:
 
 ```bash
-bash scripts/generate-one-sample.sh --samples 10
+bash scripts/generate-sample.sh --samples 10
 ```
 
 Use any positive value, such as `--samples 1`, `--samples 10`, or
