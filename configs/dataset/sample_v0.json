@@ -2,18 +2,19 @@
   "dataset_version": "sample-v0",
   "seed": 0,
   "resolution": [224, 224],
-  "instruction": "Walk to the red cube.",
-  "robot": {
-    "id": "d0",
-    "spawn": [0.0, 0.0, 0.0]
-  },
-  "target_id": "red_cube",
+  "split_percentages": {"train": 0.70, "val": 0.25, "eval": 0.05},
+  "instruction_template": "Walk to the {color} {shape}.",
+  "robot": {"id": "d0", "spawn": [0.0, 0.0, 0.0]},
+  "scene_positions": [
+    [0.85, 0.08, 0.0],
+    [0.85, -0.25, 0.0],
+    [1.05, 0.30, 0.0]
+  ],
   "objects": [
     {
       "id": "red_cube",
       "color": "red",
       "shape": "cube",
-      "position": [0.85, 0.08, 0.0],
       "size": [0.10, 0.10, 0.10],
       "rgba": [0.90, 0.10, 0.08, 1.0]
     },
@@ -21,7 +22,6 @@
       "id": "blue_sphere",
       "color": "blue",
       "shape": "sphere",
-      "position": [0.85, -0.25, 0.0],
       "size": [0.06, 0.06, 0.06],
       "rgba": [0.10, 0.30, 0.95, 1.0]
     },
@@ -29,7 +29,6 @@
       "id": "yellow_cylinder",
       "color": "yellow",
       "shape": "cylinder",
-      "position": [1.05, 0.30, 0.0],
       "size": [0.055, 0.055, 0.12],
       "rgba": [0.95, 0.75, 0.10, 1.0]
     }

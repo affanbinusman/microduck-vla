@@ -40,12 +40,14 @@ bash scripts/test-gpu.sh
 It prints your chip and MPS status, trains a small regression model, and checks
 that GPU gradients update the weights and reduce loss on fresh random samples.
 
-## Generate one dataset sample
+## Generate a dataset
 
 ```bash
-bash scripts/generate-one-sample.sh
+bash scripts/generate-one-sample.sh --samples 10
 ```
 
-Review `artifacts/datasets/sample-v0/sample-000000/preview.png`. The tracked
-scene recipe is in `configs/dataset/sample_v0.json`; generated images and
-annotations stay under ignored `artifacts/`.
+Choose any positive dataset size with `--samples`. The generator assigns
+approximately 70% train, 25% validation, and 5% evaluation samples. Review
+`artifacts/datasets/sample-v0/contact_sheet.png`; the machine-readable index is
+`annotations.jsonl`. The tracked recipe is in `configs/dataset/sample_v0.json`,
+while generated data stays under ignored `artifacts/`.
