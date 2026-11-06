@@ -3,7 +3,7 @@
   "seed": 0,
   "resolution": [224, 224],
   "wall_height": 1.0,
-  "split_percentages": {"train": 0.70, "val": 0.25, "eval": 0.05},
+  "split_percentages": {"train": 0.65, "val": 0.25, "eval": 0.10},
   "instruction_template": "Walk to the {color} {shape}.",
   "robot": {"id": "d0", "spawn": [0.0, 0.0, 0.0]},
   "scene_positions": [
