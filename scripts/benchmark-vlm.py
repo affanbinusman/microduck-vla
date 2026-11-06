@@ -21,6 +21,7 @@ import psutil
 import torch
 from PIL import Image, ImageDraw
 from transformers import AutoModelForImageTextToText, AutoProcessor
+from tqdm.auto import tqdm
 
 
 MODEL_ID = "HuggingFaceTB/SmolVLM2-500M-Video-Instruct"
@@ -52,7 +53,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--out", type=Path, default=root / "artifacts/benchmarks/smolvlm2-500m")
     parser.add_argument("--model", default=MODEL_ID)
     parser.add_argument("--device", choices=("auto", "mps", "cpu"), default="auto")
-    parser.add_argument("--max-new-tokens", type=int, default=64)
+    parser.add_argument("--max-new-tokens", type=int, default=8)
+    parser.add_argument("--dtype", choices=("float16", "float32"), default="float16")
+    parser.add_argument("--threads", type=int, default=2)
+    parser.add_argument("--refine-prompts", action="store_true", help="compare all prompts on validation; otherwise use direction-word-v2")
+    parser.add_argument("--val-limit", type=int, default=None, help="optional validation sample limit")
+    parser.add_argument("--eval-limit", type=int, default=None, help="optional evaluation sample limit")
     return parser.parse_args()
 
 
@@ -84,7 +90,7 @@ class MemorySampler:
             self.peak_mps = max(self.peak_mps, int(torch.mps.current_allocated_memory()))
 
     def _run(self) -> None:
-        while not self._stop.wait(0.01):
+        while not self._stop.wait(0.1):
             self._sample()
 
     def __enter__(self) -> "MemorySampler":
@@ -202,7 +208,12 @@ class Runner:
         messages = [{"role": "user", "content": [{"type": "image"}, {"type": "text", "text": prompt}]}]
         chat = self.processor.apply_chat_template(messages, add_generation_prompt=True)
         inputs = self.processor(text=chat, images=[image], return_tensors="pt")
-        inputs = {key: value.to(self.device) if hasattr(value, "to") else value for key, value in inputs.items()}
+        inputs = {
+            key: value.to(device=self.device, dtype=self.model.dtype)
+            if torch.is_tensor(value) and value.is_floating_point()
+            else value.to(self.device) if torch.is_tensor(value) else value
+            for key, value in inputs.items()
+        }
         sync(self.device)
         started = time.perf_counter()
         with torch.inference_mode():
@@ -265,6 +276,11 @@ def draw_eval_overlay(dataset: Path, out: Path, row: dict[str, Any], record: dic
 
 def main() -> None:
     args = parse_args()
+    for name in ("threads", "max_new_tokens", "val_limit", "eval_limit"):
+        value = getattr(args, name)
+        if value is not None and value < 1:
+            raise ValueError(f"{name} must be positive")
+    torch.set_num_threads(args.threads)
     random.seed(0)
     np.random.seed(0)
     torch.manual_seed(0)
@@ -274,16 +290,30 @@ def main() -> None:
     rows = read_dataset(args.dataset)
     validation = [row for row in rows if row["split"] == "val"]
     evaluation = [row for row in rows if row["split"] == "eval"]
+    validation = validation[:args.val_limit]
+    evaluation = evaluation[:args.eval_limit]
     if not validation or not evaluation:
         raise ValueError("dataset must contain at least one validation and one evaluation sample")
     args.out.mkdir(parents=True, exist_ok=True)
 
+    def run_split(runner: Runner, samples: list[dict], prompt_id: str, stream: Any, phase: str) -> list[dict]:
+        records = []
+        bar = tqdm(samples, desc=f"{phase}: {prompt_id}", unit="sample")
+        for row in bar:
+            record = run_one(runner, args.dataset, row, prompt_id)
+            stream.write(json.dumps(record) + "\n")
+            stream.flush()
+            records.append(record)
+            bar.set_postfix(seconds=record["latency_s"], valid=record["score"]["valid"])
+        return records
+
     load_started = time.perf_counter()
     with MemorySampler(device) as memory:
+        print(f"Loading {args.model} on {device} ({args.dtype}); CPU threads={args.threads}", flush=True)
         processor = AutoProcessor.from_pretrained(args.model)
         model = AutoModelForImageTextToText.from_pretrained(
             args.model,
-            dtype=torch.float32,
+            dtype=getattr(torch, args.dtype),
             low_cpu_mem_usage=True,
         ).to(device)
         model.eval()
@@ -291,23 +321,27 @@ def main() -> None:
         load_seconds = time.perf_counter() - load_started
 
         # Warm-up is excluded from recorded latency and uses validation data only.
-        warm_prompt = PROMPTS[next(iter(PROMPTS))].format(instruction=validation[0]["instruction"])
+        print("Warming up on one validation image...", flush=True)
+        warm_prompt = PROMPTS["direction-word-v2"].format(instruction=validation[0]["instruction"])
         runner.infer(Image.open(args.dataset / validation[0]["image"]).convert("RGB"), warm_prompt)
 
         validation_records: list[dict[str, Any]] = []
         prompt_metrics: dict[str, dict[str, Any]] = {}
-        for prompt_id in PROMPTS:
-            records = [run_one(runner, args.dataset, row, prompt_id) for row in validation]
-            validation_records.extend(records)
-            prompt_metrics[prompt_id] = aggregate(records)
-        selected = max(PROMPTS, key=lambda prompt_id: selection_key(prompt_metrics[prompt_id], prompt_id))
+        candidates = list(PROMPTS) if args.refine_prompts else ["direction-word-v2"]
+        with (args.out / "validation_runs.jsonl").open("w") as stream:
+            for prompt_id in candidates:
+                records = run_split(runner, validation, prompt_id, stream, "Validation")
+                validation_records.extend(records)
+                prompt_metrics[prompt_id] = aggregate(records)
+        selected = max(candidates, key=lambda prompt_id: selection_key(prompt_metrics[prompt_id], prompt_id))
 
         # The prompt is frozen here. Evaluation data did not participate above.
-        evaluation_records = [run_one(runner, args.dataset, row, selected) for row in evaluation]
+        with (args.out / "eval_predictions.jsonl").open("w") as stream:
+            evaluation_records = run_split(runner, evaluation, selected, stream, "Evaluation")
 
     revision = getattr(model.config, "_commit_hash", None)
     selection = {
-        "candidates": PROMPTS,
+        "candidates": {key: PROMPTS[key] for key in candidates},
         "validation_metrics": prompt_metrics,
         "selection_order": [
             "direction_accuracy",
@@ -324,7 +358,10 @@ def main() -> None:
         "model": args.model,
         "model_revision": revision,
         "device": str(device),
-        "dtype": "float32",
+        "dtype": args.dtype,
+        "max_new_tokens": args.max_new_tokens,
+        "cpu_threads": args.threads,
+        "refine_prompts": args.refine_prompts,
         "temperature": 0,
         "do_sample": False,
         "seed": 0,
@@ -339,8 +376,8 @@ def main() -> None:
         "peak_mps_allocated_mib": round(memory.peak_mps / 2**20, 2),
         "system": {"platform": platform.platform(), "python": platform.python_version(), "torch": torch.__version__},
         "limitations": [
-            "This ten-sample run has only two validation and one evaluation example.",
-            "It validates the benchmark pipeline and is not a statistically meaningful model result.",
+            "Interpret accuracy in light of the recorded evaluation sample count and scene diversity.",
+            "Float16 and a shorter generation limit can change predictions versus earlier float32 runs.",
         ],
     }
     (args.out / "validation_runs.jsonl").write_text(
