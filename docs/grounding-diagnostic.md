@@ -28,6 +28,7 @@ in this dataset, its success does not establish shape recognition.
 
 Outputs include `cases.jsonl`, `baseline.jsonl`, `simple.jsonl`, `columns.jsonl`,
 and `summary.json` with confusion matrices (rows=true, columns=predicted),
+plus `confusion_matrices.png` for visual comparison,
 valid rates, accuracy, counts of scenes with all three questions correct, and
 counts receiving the same answer for every object. Incorrect VLM answers get
 individual failure overlays. Responses are flushed after every question;

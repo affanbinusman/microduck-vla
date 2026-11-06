@@ -138,6 +138,7 @@ def infer(args):
             results[name] = summarize(records)
     summary = {"validation_only": True, "scenes": args.scenes, "model_revision": revision, "device": str(device), "dtype": "float16", "do_sample": False, "seed": 0, "max_new_tokens": 8, "results": results, "peak_mps_tensor_mib": memory.peak_mps/2**20, "peak_process_rss_mib": memory.peak_rss/2**20}
     (args.out / "summary.json").write_text(json.dumps(summary, indent=2)+"\n")
+    runpy.run_path(str(ROOT / "scripts/plot-confusion.py"))["plot_confusion"](args.out / "summary.json")
     print(json.dumps(summary, indent=2))
 
 

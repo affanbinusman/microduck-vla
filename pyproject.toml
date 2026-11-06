@@ -5,6 +5,7 @@ description = "Vision-language robotics experiments with Microduck simulation"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "accelerate>=1,<2",
+    "matplotlib>=3.11.2",
     "num2words>=0.5",
     "pillow>=10.1",
     "psutil>=6",
