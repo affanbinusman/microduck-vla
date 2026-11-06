@@ -51,3 +51,16 @@ approximately 70% train, 25% validation, and 5% evaluation samples. Review
 `artifacts/datasets/sample-v0/contact_sheet.png`; the machine-readable index is
 `annotations.jsonl`. The tracked recipe is in `configs/dataset/sample_v0.json`,
 while generated data stays under ignored `artifacts/`.
+
+## Benchmark the pretrained VLM
+
+```bash
+bash scripts/benchmark-vlm.sh
+```
+
+The first run downloads the pinned SmolVLM2 model revision into the ignored
+project cache. It refines prompts on validation samples, freezes the selected
+prompt, and then evaluates without sampling on the evaluation split. Results
+are written to `artifacts/benchmarks/smolvlm2-500m/`; see
+[`docs/vlm-benchmark.md`](docs/vlm-benchmark.md) for the artifact contract and
+current ten-sample pipeline result.

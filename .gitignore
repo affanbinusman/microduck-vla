@@ -221,3 +221,4 @@ __marimo__/
 /artifacts/
 .DS_Store
 MUJOCO_LOG.TXT
+TODO.md

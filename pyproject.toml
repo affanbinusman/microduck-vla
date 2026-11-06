@@ -3,7 +3,15 @@ name = "microduck-vla"
 version = "0.1.0"
 description = "Vision-language robotics experiments with Microduck simulation"
 requires-python = ">=3.12,<3.13"
-dependencies = []
+dependencies = [
+    "accelerate>=1,<2",
+    "num2words>=0.5",
+    "pillow>=10.1",
+    "psutil>=6",
+    "torch==2.9.1",
+    "torchvision==0.24.1",
+    "transformers>=4.57,<5",
+]
 
 [tool.uv]
 package = false
